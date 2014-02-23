@@ -50,6 +50,22 @@ L.HeatLayer = L.Class.extend({
         return this;
     },
 
+    getLatLngs: function () {
+        return this._latlngs;
+    },
+
+    setLatLngs: function (latlngs) {
+        this._latlngs = latlngs;
+        this._redraw();
+        return this;
+    },
+
+    addLatLngs: function (latlngs) {
+        this._latlngs = this._latlngs.concat(latlngs);
+        this._redraw();
+        return this;
+    },
+
     _initCanvas: function () {
         var canvas = this._canvas = L.DomUtil.create('canvas', 'leaflet-heatmap-layer');
 
@@ -81,62 +97,64 @@ L.HeatLayer = L.Class.extend({
     },
 
     _redraw: function () {
-        var data = [],
-            r = this._heat._r,
-            size = this._map.getSize(),
-            bounds = new L.LatLngBounds(
-                this._map.containerPointToLatLng(L.point([-r, -r])),
-                this._map.containerPointToLatLng(size.add([r, r]))),
+        if(this._latlngs.length){
+            var data = [],
+                r = this._heat._r,
+                size = this._map.getSize(),
+                bounds = new L.LatLngBounds(
+                    this._map.containerPointToLatLng(L.point([-r, -r])),
+                    this._map.containerPointToLatLng(size.add([r, r]))),
 
-            maxZoom = this.options.maxZoom === undefined ? this._map.getMaxZoom() : this.options.maxZoom,
-            v = 1 / Math.pow(2, Math.max(0, Math.min(maxZoom - this._map.getZoom(), 12))),
-            cellSize = r / 2,
-            grid = [],
-            panePos = this._map._getMapPanePos(),
-            offsetX = panePos.x % cellSize,
-            offsetY = panePos.y % cellSize,
-            i, len, p, cell, x, y, j, len2;
+                maxZoom = this.options.maxZoom === undefined ? this._map.getMaxZoom() : this.options.maxZoom,
+                v = 1 / Math.pow(2, Math.max(0, Math.min(maxZoom - this._map.getZoom(), 12))),
+                cellSize = r / 2,
+                grid = [],
+                panePos = this._map._getMapPanePos(),
+                offsetX = panePos.x % cellSize,
+                offsetY = panePos.y % cellSize,
+                i, len, p, cell, x, y, j, len2;
 
-        // console.time('process');
-        for (i = 0, len = this._latlngs.length; i < len; i++) {
-            if (bounds.contains(this._latlngs[i])) {
-                p = this._map.latLngToContainerPoint(this._latlngs[i]);
-                x = Math.floor((p.x - offsetX) / cellSize) + 2;
-                y = Math.floor((p.y - offsetY) / cellSize) + 2;
+            // console.time('process');
+            for (i = 0, len = this._latlngs.length; i < len; i++) {
+                if (bounds.contains(this._latlngs[i])) {
+                    p = this._map.latLngToContainerPoint(this._latlngs[i]);
+                    x = Math.floor((p.x - offsetX) / cellSize) + 2;
+                    y = Math.floor((p.y - offsetY) / cellSize) + 2;
 
-                grid[y] = grid[y] || [];
-                cell = grid[y][x];
+                    grid[y] = grid[y] || [];
+                    cell = grid[y][x];
 
-                if (!cell) {
-                    grid[y][x] = [p.x, p.y, v];
+                    if (!cell) {
+                        grid[y][x] = [p.x, p.y, v];
 
-                } else {
-                    cell[0] = (cell[0] * cell[2] + p.x * v) / (cell[2] + v); // x
-                    cell[1] = (cell[1] * cell[2] + p.y * v) / (cell[2] + v); // y
-                    cell[2] += v; // cumulated intensity value
-                }
-            }
-        }
-
-        for (i = 0, len = grid.length; i < len; i++) {
-            if (grid[i]) {
-                for (j = 0, len2 = grid[i].length; j < len2; j++) {
-                    cell = grid[i][j];
-                    if (cell) {
-                        data.push([
-                            Math.round(cell[0]),
-                            Math.round(cell[1]),
-                            Math.min(cell[2], 1)
-                        ]);
+                    } else {
+                        cell[0] = (cell[0] * cell[2] + p.x * v) / (cell[2] + v); // x
+                        cell[1] = (cell[1] * cell[2] + p.y * v) / (cell[2] + v); // y
+                        cell[2] += v; // cumulated intensity value
                     }
                 }
             }
-        }
-        // console.timeEnd('process');
 
-        // console.time('draw ' + data.length);
-        this._heat.data(data).draw();
-        // console.timeEnd('draw ' + data.length);
+            for (i = 0, len = grid.length; i < len; i++) {
+                if (grid[i]) {
+                    for (j = 0, len2 = grid[i].length; j < len2; j++) {
+                        cell = grid[i][j];
+                        if (cell) {
+                            data.push([
+                                Math.round(cell[0]),
+                                Math.round(cell[1]),
+                                Math.min(cell[2], 1)
+                            ]);
+                        }
+                    }
+                }
+            }
+            // console.timeEnd('process');
+
+            // console.time('draw ' + data.length);
+            this._heat.data(data).draw();
+            // console.timeEnd('draw ' + data.length);
+        }
     },
 
     _animateZoom: function (e) {
