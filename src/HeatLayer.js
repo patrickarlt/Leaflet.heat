@@ -9,7 +9,8 @@ L.HeatLayer = L.Class.extend({
     options: {
         // maxZoom: 18,
         // radius: 25,
-        // blur: 15
+        // blur: 15,
+        // gradient: {0.4: 'blue', 0.65: 'lime', 1: 'red'}
     },
 
     initialize: function (latlngs, options) {
@@ -62,6 +63,7 @@ L.HeatLayer = L.Class.extend({
 
         this._heat = simpleheat(canvas);
         this._heat.radius(this.options.radius || this._heat.defaultRadius, this.options.blur);
+        this._heat.gradient(this.options.gradient || this._heat.defaultGradient);
     },
 
     _reset: function () {
